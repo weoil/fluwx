@@ -2,10 +2,6 @@ package com.jarvan.fluwx
 
 import androidx.annotation.NonNull
 import com.jarvan.fluwx.handlers.*
-import com.jarvan.fluwx.handlers.FluwxAuthHandler
-import com.jarvan.fluwx.handlers.FluwxShareHandler
-import com.jarvan.fluwx.handlers.FluwxShareHandlerCompat
-import com.jarvan.fluwx.handlers.FluwxShareHandlerEmbedding
 import com.tencent.mm.opensdk.modelbiz.SubscribeMessage
 import com.tencent.mm.opensdk.modelbiz.WXLaunchMiniProgram
 import com.tencent.mm.opensdk.modelbiz.WXOpenBusinessWebview
@@ -20,17 +16,23 @@ import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
 
 /** FluwxPlugin */
-public class FluwxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
+class FluwxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     companion object {
+
+        var callingChannel:MethodChannel? = null
+
         @JvmStatic
         fun registerWith(registrar: PluginRegistry.Registrar) {
             val channel = MethodChannel(registrar.messenger(), "com.jarvanmo/fluwx")
             val authHandler = FluwxAuthHandler(channel)
-            FluwxResponseHandler.setMethodChannel(channel)
+            WXAPiHandler.setContext(registrar.activity().applicationContext)
             channel.setMethodCallHandler(FluwxPlugin().apply {
+                this.fluwxChannel = channel
                 this.authHandler = authHandler
-                this.shareHandler = FluwxShareHandlerCompat(registrar)
+                this.shareHandler = FluwxShareHandlerCompat(registrar).apply {
+                    permissionHandler = PermissionHandler(registrar.activity())
+                }
             })
         }
     }
@@ -39,24 +41,29 @@ public class FluwxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     private var authHandler: FluwxAuthHandler? = null
 
+    private var fluwxChannel: MethodChannel? = null
+
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         val channel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.jarvanmo/fluwx")
         channel.setMethodCallHandler(this)
-        FluwxResponseHandler.setMethodChannel(channel)
+        fluwxChannel = channel
         authHandler = FluwxAuthHandler(channel)
         shareHandler = FluwxShareHandlerEmbedding(flutterPluginBinding.flutterAssets, flutterPluginBinding.applicationContext)
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
+        FluwxPlugin.callingChannel = fluwxChannel
         when {
             call.method == "registerApp" -> WXAPiHandler.registerApp(call, result)
             call.method == "sendAuth" -> authHandler?.sendAuth(call, result)
             call.method == "authByQRCode" -> authHandler?.authByQRCode(call, result)
             call.method == "stopAuthByQRCode" -> authHandler?.stopAuthByQRCode(result)
             call.method == "payWithFluwx" -> pay(call, result)
+            call.method == "payWithHongKongWallet" -> payWithHongKongWallet(call, result)
             call.method == "launchMiniProgram" -> launchMiniProgram(call, result)
             call.method == "subscribeMsg" -> subScribeMsg(call, result)
             call.method == "autoDeduct" -> signAutoDeduct(call, result)
+            call.method == "openWXApp" -> openWXApp(result)
             call.method.startsWith("share") -> shareHandler?.share(call, result)
             call.method == "isWeChatInstalled" -> WXAPiHandler.checkWeChatInstallation(result)
             else -> result.notImplemented()
@@ -69,20 +76,23 @@ public class FluwxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     override fun onDetachedFromActivity() {
+        shareHandler?.permissionHandler = null
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        shareHandler?.permissionHandler = PermissionHandler(binding.activity)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         WXAPiHandler.setContext(binding.activity.applicationContext)
+        shareHandler?.permissionHandler = PermissionHandler(binding.activity)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
     }
 
 
-    fun pay(call: MethodCall, result: MethodChannel.Result) {
+    private fun pay(call: MethodCall, result: MethodChannel.Result) {
 
         if (WXAPiHandler.wxApi == null) {
             result.error("Unassigned WxApi", "please config  wxapi first", null)
@@ -103,6 +113,16 @@ public class FluwxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             val done = WXAPiHandler.wxApi?.sendReq(request)
             result.success(done)
         }
+    }
+
+    private fun payWithHongKongWallet(call: MethodCall, result: MethodChannel.Result) {
+        val prepayId = call.argument<String>("prepayId") ?: ""
+        val request = WXOpenBusinessWebview.Req()
+        request.businessType = 1
+        request.queryInfo = hashMapOf(
+                "token" to prepayId
+        )
+        result.success(WXAPiHandler.wxApi?.sendReq(request))
     }
 
     private fun signAutoDeduct(call: MethodCall, result: Result) {
@@ -165,4 +185,6 @@ public class FluwxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         val done = WXAPiHandler.wxApi?.sendReq(req)
         result.success(WXAPiHandler.wxApi?.sendReq(req))
     }
+
+    private fun openWXApp(result: MethodChannel.Result) = result.success(WXAPiHandler.wxApi?.openWXApp())
 }

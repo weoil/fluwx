@@ -2,16 +2,14 @@ package com.jarvan.fluwx.handlers
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.AssetFileDescriptor
 import android.net.Uri
 import android.text.TextUtils
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
-import com.jarvan.fluwx.io.ImagesIO
-import com.jarvan.fluwx.io.ImagesIOIml
-import com.jarvan.fluwx.io.WeChatImage
-import com.jarvan.fluwx.io.toExternalCacheFile
+import androidx.core.content.FileProvider
+import com.jarvan.fluwx.io.*
 import com.tencent.mm.opensdk.modelbase.BaseReq
 import com.tencent.mm.opensdk.modelmsg.*
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -19,8 +17,10 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry
 import kotlinx.coroutines.*
+import java.io.File
 import java.util.*
 import kotlin.coroutines.CoroutineContext
+
 
 /***
  * Created by mo on 2020/3/6
@@ -28,7 +28,6 @@ import kotlin.coroutines.CoroutineContext
  * 万里飞雪，将穹苍作烘炉，熔万物为白银。
  **/
 internal class FluwxShareHandlerEmbedding(private val flutterAssets: FlutterPlugin.FlutterAssets, override val context: Context) : FluwxShareHandler {
-
     override val assetFileDescriptor: (String) -> AssetFileDescriptor = {
         val uri = Uri.parse(it)
         val packageName = uri.getQueryParameter("package")
@@ -42,6 +41,8 @@ internal class FluwxShareHandlerEmbedding(private val flutterAssets: FlutterPlug
     }
 
     override val job: Job = Job()
+
+    override var permissionHandler: PermissionHandler? = null
 }
 
 internal class FluwxShareHandlerCompat(private val registrar: PluginRegistry.Registrar) : FluwxShareHandler {
@@ -58,11 +59,13 @@ internal class FluwxShareHandlerCompat(private val registrar: PluginRegistry.Reg
 
     override val context: Context = registrar.context().applicationContext
     override val job: Job = Job()
+    override var permissionHandler: PermissionHandler? = null
 }
 
 internal interface FluwxShareHandler : CoroutineScope {
     companion object {
         const val SHARE_IMAGE_THUMB_LENGTH = 32 * 1024
+        const val SHARE_MINI_PROGRAM_THUMB_LENGTH = 120 * 1024
         private const val keyTitle = "title"
         private const val keyThumbnail = "thumbnail"
         private const val keyDescription = "description"
@@ -89,7 +92,7 @@ internal interface FluwxShareHandler : CoroutineScope {
     }
 
     private fun shareText(call: MethodCall, result: MethodChannel.Result) {
-        val textObj = WXTextObject(call.argument<String?>("source"))
+        val textObj = WXTextObject(call.argument("source"))
         val msg = WXMediaMessage()
         msg.mediaObject = textObj
         val req = SendMessageToWX.Req()
@@ -111,7 +114,7 @@ internal interface FluwxShareHandler : CoroutineScope {
         msg.description = call.argument(keyDescription)               // 小程序消息desc
 
         launch {
-            msg.thumbData = readThumbnailByteArray(call)
+            msg.thumbData = readThumbnailByteArray(call, length = SHARE_MINI_PROGRAM_THUMB_LENGTH)
 
             val req = SendMessageToWX.Req()
             setCommonArguments(call, req, msg)
@@ -123,7 +126,7 @@ internal interface FluwxShareHandler : CoroutineScope {
     private fun shareImage(call: MethodCall, result: MethodChannel.Result) {
         launch {
             val map: Map<String, Any> = call.argument("source") ?: mapOf()
-            val sourceImage = WeChatImage.createWeChatImage(map, assetFileDescriptor)
+            val sourceImage = WeChatFile.createWeChatFile(map, assetFileDescriptor)
             val thumbData = readThumbnailByteArray(call)
 
             val sourceByteArray = sourceImage.readByteArray()
@@ -131,24 +134,25 @@ internal interface FluwxShareHandler : CoroutineScope {
                 sourceByteArray.isEmpty() -> {
                     WXImageObject()
                 }
-                sourceByteArray.size > 512 * 1024 -> {
+                else -> {
                     WXImageObject().apply {
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission_group.STORAGE) == PackageManager.PERMISSION_GRANTED) {
-                            setImagePath(sourceByteArray.toExternalCacheFile(context, sourceImage.suffix)?.absolutePath)
+                        if (supportFileProvider && targetHigherThanN) {
+                            setImagePath(getFileContentUri(sourceByteArray.toCacheFile(context, sourceImage.suffix)))
                         } else {
-                            Fragment().requestPermissions(arrayOf(Manifest.permission_group.STORAGE), 12121)
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                                setImagePath(sourceByteArray.toExternalCacheFile(context, sourceImage.suffix)?.absolutePath)
+                            } else {
+                                permissionHandler?.requestStoragePermission()
+                            }
                         }
                     }
-                }
-                else -> {
-                    WXImageObject(sourceByteArray)
                 }
             }
             val msg = WXMediaMessage()
             msg.mediaObject = imageObject
             msg.thumbData = thumbData
 
-            msg.description = call.argument<String>(keyDescription)
+            msg.description = call.argument(keyDescription)
 
             val req = SendMessageToWX.Req()
             setCommonArguments(call, req, msg)
@@ -225,15 +229,33 @@ internal interface FluwxShareHandler : CoroutineScope {
     }
 
     private fun shareFile(call: MethodCall, result: MethodChannel.Result) {
-        val file = WXFileObject()
-        val filePath: String? = call.argument("filePath")
-        file.filePath = filePath
-
-        val msg = WXMediaMessage()
-        msg.mediaObject = file
-        msg.description = call.argument("description")
-
         launch {
+
+            val wxFileObject = WXFileObject()
+//            val filePath: String? = call.argument("filePath")
+//            wxFileObject.filePath = filePath
+
+            val msg = WXMediaMessage()
+            msg.mediaObject = wxFileObject
+            msg.description = call.argument("description")
+
+            val map: Map<String, Any> = call.argument("source") ?: mapOf()
+            val sourceFile = WeChatFile.createWeChatFile(map, assetFileDescriptor)
+
+            val sourceByteArray = sourceFile.readByteArray()
+
+            wxFileObject.apply {
+                if (supportFileProvider && targetHigherThanN) {
+                    setFilePath(getFileContentUri(sourceByteArray.toCacheFile(context, sourceFile.suffix)))
+                } else {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                        filePath = sourceByteArray.toExternalCacheFile(context, sourceFile.suffix)?.absolutePath
+                    } else {
+                        permissionHandler?.requestStoragePermission()
+                    }
+                }
+            }
+
             msg.thumbData = readThumbnailByteArray(call)
             val req = SendMessageToWX.Req()
             setCommonArguments(call, req, msg)
@@ -246,24 +268,29 @@ internal interface FluwxShareHandler : CoroutineScope {
         result.success(WXAPiHandler.wxApi?.sendReq(request))
     }
 
-    private suspend fun readThumbnailByteArray(call: MethodCall): ByteArray? {
+    private suspend fun readThumbnailByteArray(call: MethodCall, length: Int = SHARE_IMAGE_THUMB_LENGTH): ByteArray? {
         val thumbnailMap: Map<String, Any>? = call.argument(keyThumbnail)
+        val compress:Boolean = call.argument("compressThumbnail")?:true
         return thumbnailMap?.run {
-            val thumbnailImage = WeChatImage.createWeChatImage(thumbnailMap, assetFileDescriptor)
+            val thumbnailImage = WeChatFile.createWeChatFile(thumbnailMap, assetFileDescriptor)
             val thumbnailImageIO = ImagesIOIml(thumbnailImage)
-            compressThumbnail(thumbnailImageIO)
+            if(compress){
+                compressThumbnail(thumbnailImageIO, length)
+            }else{
+                thumbnailImageIO.readByteArray()
+            }
         }
     }
 
-    private suspend fun compressThumbnail(ioIml: ImagesIO) = ioIml.compressedByteArray(context, SHARE_IMAGE_THUMB_LENGTH)
+    private suspend fun compressThumbnail(ioIml: ImagesIO, length: Int) = ioIml.compressedByteArray(context, length)
 
     //    SESSION, TIMELINE, FAVORITE
     private fun setCommonArguments(call: MethodCall, req: SendMessageToWX.Req, msg: WXMediaMessage) {
-        msg.messageAction = call.argument<String?>("messageAction")
-        msg.messageExt = call.argument<String?>("messageExt")
-        msg.mediaTagName = call.argument<String?>("mediaTagName")
-        msg.title = call.argument<String?>(keyTitle)
-        msg.description = call.argument<String?>(keyDescription)
+        msg.messageAction = call.argument("messageAction")
+        msg.messageExt = call.argument("messageExt")
+        msg.mediaTagName = call.argument("mediaTagName")
+        msg.title = call.argument(keyTitle)
+        msg.description = call.argument(keyDescription)
         req.transaction = UUID.randomUUID().toString().replace("-", "")
         val sceneIndex = call.argument<Int?>("scene")
         req.scene = when (sceneIndex) {
@@ -274,6 +301,25 @@ internal interface FluwxShareHandler : CoroutineScope {
         }
     }
 
+    private fun getFileContentUri(file: File?): String? {
+        if (file == null || !file.exists())
+            return null
+
+        val contentUri = FileProvider.getUriForFile(context,
+                "${context.packageName}.fluwxprovider",  // 要与`AndroidManifest.xml`里配置的`authorities`一致，假设你的应用包名为com.example.app
+                file)
+
+        // 授权给微信访问路径
+        context.grantUriPermission("com.tencent.mm",  // 这里填微信包名
+                contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+        return contentUri.toString() // contentUri.toString() 即是以"content://"开头的用于共享的路径
+
+    }
+
+    private val supportFileProvider: Boolean get() = WXAPiHandler.wxApi?.wxAppSupportAPI ?: 0 >= 0x27000D00
+    private val targetHigherThanN: Boolean get() = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N
+
     val context: Context
 
     val assetFileDescriptor: (String) -> AssetFileDescriptor
@@ -283,8 +329,8 @@ internal interface FluwxShareHandler : CoroutineScope {
 
     val job: Job
 
-    fun onDestroy() {
-        job.cancel()
-    }
+    var permissionHandler: PermissionHandler?
 
+    fun onDestroy() = job.cancel()
 }
+

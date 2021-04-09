@@ -10,14 +10,23 @@ FluwxShareHandler *_fluwxShareHandler;
 
 BOOL handleOpenURLByFluwx = YES;
 
+FlutterMethodChannel *channel = nil;
+
 + (void)registerWithRegistrar:(NSObject <FlutterPluginRegistrar> *)registrar {
-    FlutterMethodChannel *channel = [FlutterMethodChannel
-            methodChannelWithName:@"com.jarvanmo/fluwx"
-                  binaryMessenger:[registrar messenger]];
-    FluwxPlugin *instance = [[FluwxPlugin alloc] initWithRegistrar:registrar methodChannel:channel];
-    [registrar addMethodCallDelegate:instance channel:channel];
-    [[FluwxResponseHandler defaultManager] setMethodChannel:channel];
-    [registrar addApplicationDelegate:instance];
+    
+#if TARGET_OS_IPHONE
+        if (channel == nil) {
+#endif
+        channel = [FlutterMethodChannel
+                methodChannelWithName:@"com.jarvanmo/fluwx"
+                      binaryMessenger:[registrar messenger]];
+        FluwxPlugin *instance = [[FluwxPlugin alloc] initWithRegistrar:registrar methodChannel:channel];
+        [registrar addMethodCallDelegate:instance channel:channel];
+        [[FluwxResponseHandler defaultManager] setMethodChannel:channel];
+        [registrar addApplicationDelegate:instance];
+#if TARGET_OS_IPHONE
+        }
+#endif
 
 }
 
@@ -46,12 +55,16 @@ BOOL handleOpenURLByFluwx = YES;
         result(@([WXApi openWXApp]));
     } else if ([@"payWithFluwx" isEqualToString:call.method]) {
         [self handlePayment:call result:result];
+    } else if ([@"payWithHongKongWallet" isEqualToString:call.method]) {
+        [self handleHongKongWalletPayment:call result:result];
     } else if ([@"launchMiniProgram" isEqualToString:call.method]) {
         [self handleLaunchMiniProgram:call result:result];
     } else if ([@"subscribeMsg" isEqualToString:call.method]) {
         [self handleSubscribeWithCall:call result:result];
     } else if ([@"autoDeduct" isEqualToString:call.method]) {
         [self handleAutoDeductWithCall:call result:result];
+    }else if([@"authByPhoneLogin" isEqualToString:call.method]){
+        [_fluwxAuthHandler handleAuthByPhoneLogin:call result:result];
     } else if ([call.method hasPrefix:@"share"]) {
         [_fluwxShareHandler handleShare:call result:result];
     } else {
@@ -60,7 +73,9 @@ BOOL handleOpenURLByFluwx = YES;
 }
 
 - (void)registerApp:(FlutterMethodCall *)call result:(FlutterResult)result {
-    if (!call.arguments[@"iOS"]) {
+    NSNumber* doOnIOS =call.arguments[@"iOS"];
+
+    if (![doOnIOS boolValue]) {
         result(@NO);
         return;
     }
@@ -107,6 +122,19 @@ BOOL handleOpenURLByFluwx = YES;
                                 Sign:sign completion:^(BOOL done) {
                 result(@(done));
             }];
+}
+
+- (void)handleHongKongWalletPayment:(FlutterMethodCall *)call result:(FlutterResult)result {
+    NSString *partnerId = call.arguments[@"prepayId"];
+    
+    WXOpenBusinessWebViewReq *req = [[WXOpenBusinessWebViewReq alloc] init];
+    req.businessType = 1;
+    NSMutableDictionary *queryInfoDic = [NSMutableDictionary dictionary];
+    [queryInfoDic setObject:partnerId forKey:@"token"];
+    req.queryInfoDic = queryInfoDic;
+    [WXApi sendReq:req completion:^(BOOL done) {
+        result(@(done));
+    }];
 }
 
 - (void)handleLaunchMiniProgram:(FlutterMethodCall *)call result:(FlutterResult)result {
@@ -171,12 +199,12 @@ BOOL handleOpenURLByFluwx = YES;
     return [WXApi handleOpenURL:url delegate:[FluwxResponseHandler defaultManager]];
 }
 
-- (BOOL) application:(UIApplication *)application
-continueUserActivity:(NSUserActivity *)userActivity
-  restorationHandler:(void (^)(NSArray *))restorationHandler {
-    return [WXApi handleOpenUniversalLink:userActivity delegate:[FluwxResponseHandler defaultManager]];
+- (BOOL)application:(UIApplication *)application continueUserActivity:(NSUserActivity *)userActivity restorationHandler:(void (^)(NSArray * _Nonnull))restorationHandler{
+        return [WXApi handleOpenUniversalLink:userActivity delegate:[FluwxResponseHandler defaultManager]];
 }
-
+- (void)scene:(UIScene *)scene continueUserActivity:(NSUserActivity *)userActivity  API_AVAILABLE(ios(13.0)){
+    [WXApi handleOpenUniversalLink:userActivity delegate:[FluwxResponseHandler defaultManager]];
+}
 
 - (BOOL)handleOpenURL:(NSNotification *)aNotification {
     if (handleOpenURLByFluwx) {

@@ -1,3 +1,88 @@
+## 2.6.2
+* Fix #338 on Android
+
+## 2.6.1
+* Fix #338
+
+## 2.6.0+2
+* Remove trailing
+
+## 2.6.0+1
+* Nothing
+
+## 2.6.0
+* Android支持通过H5冷启动app传递<wx-open-launch-app>中的extinfo数据
+* Android新加<meta-data>handleWeChatRequestByFluwx</meta-data>。
+
+## 2.5.0+1
+* Fix trailing , issue.
+
+## 2.5.0
+* App获取开放标签<wx-open-launch-app>中的extinfo数据
+
+## 2.4.2
+* Fix #317
+
+## 2.4.1
+* 修复Android 11无法分享图片的问题
+
+## 2.4.0
+* 支持compressThumbnail
+* 升级OkHttp
+
+## 2.3.0
+* 适配Flutter 1.20
+* 升级Android的Gradle以及更库的版本
+
+## 2.2.0
+* Merged #249
+
+## 2.1.0
+* Specifying supported platforms
+* Fix: Android分享小程序时，缩略图压缩过重的问题
+* 更改分享文件的实现形式
+
+## 2.0.9
+* Android SDK 升级到6.6.4
+* iOS SDK升级到1.8.7.1
+* Kotlin->1.3.72
+
+## 2.0.8+3
+* Merge #218
+
+## 2.0.8+2
+* Merge #218
+
+## 2.0.8+1
+* 修复ios编译错误
+
+## 2.0.8
+* Fix #212
+
+## 2.0.7
+* Fix #207
+
+## 2.0.6+2
+* Fix: Android分享大图时存储权限问题
+
+## 2.0.6
+* Fix: Android请求权限崩溃的问题
+
+## 2.0.5+1
+* 升级
+
+## 2.0.5
+* Fix:Android分享file文件时，会crash
+
+## 2.0.4
+* Fix:hdImage为空时，ios会crash
+
+## 2.0.3
+* 添加混淆文件
+
+## 2.0.2
+* Fix #199
+
 ## 2.0.1
 * 修复Android没有回调的问题
 
