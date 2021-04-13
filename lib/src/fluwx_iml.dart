@@ -80,6 +80,11 @@ Future<bool> registerWxApi(
   });
 }
 
+// get ext Message
+Future<String> getExtMsg() async {
+  return await _channel.invokeMethod("getExtMsg");
+}
+
 ///Share your requests to WeChat.
 ///This depends on the actual type of [model].
 ///see [_shareModelMethodMapper] for detail.
@@ -142,6 +147,14 @@ Future<bool> payWithWeChat(
     "sign": sign,
     "signType": signType,
     "extData": extData,
+  });
+}
+
+/// request Hong Kong Wallet payment with WeChat.
+/// Read the official document for more detail.
+Future<bool> payWithWeChatHongKongWallet({@required String prepayId}) async {
+  return await _channel.invokeMethod("payWithHongKongWallet", {
+    "prepayId": prepayId,
   });
 }
 
@@ -231,4 +244,11 @@ Future _methodHandler(MethodCall methodCall) {
       BaseWeChatResponse.create(methodCall.method, methodCall.arguments);
   _weChatResponseEventHandlerController.add(response);
   return Future.value();
+}
+
+///IOS only
+Future<bool> authWeChatByPhoneLogin(
+    {@required String scope, String state}) async {
+  return await _channel
+      .invokeMethod("authByPhoneLogin", {"scope": scope, "state": state});
 }

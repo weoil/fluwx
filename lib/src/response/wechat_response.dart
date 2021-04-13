@@ -32,14 +32,16 @@ Map<String, _WeChatResponseInvoker> _nameAndResponseMapper = {
   "onPayResponse": (Map argument) => WeChatPaymentResponse.fromMap(argument),
   "onSubscribeMsgResp": (Map argument) =>
       WeChatSubscribeMsgResponse.fromMap(argument),
-  "onAutoDeductResponse": (Map argument) =>
-      WeChatAutoDeductResponse.fromMap(argument),
+  "onWXOpenBusinessWebviewResponse": (Map argument) =>
+      WeChatOpenBusinessWebviewResponse.fromMap(argument),
   "onAuthByQRCodeFinished": (Map argument) =>
       WeChatAuthByQRCodeFinishedResponse.fromMap(argument),
   "onAuthGotQRCode": (Map argument) =>
       WeChatAuthGotQRCodeResponse.fromMap(argument),
   "onQRCodeScanned": (Map argument) =>
       WeChatQRCodeScannedResponse.fromMap(argument),
+  "onWXShowMessageFromWX": (Map argument) =>
+      WeChatShowMessageFromWXRequest.fromMap(argument),
 };
 
 class BaseWeChatResponse {
@@ -134,13 +136,13 @@ class WeChatSubscribeMsgResponse extends BaseWeChatResponse {
         super._(map[_errCode], map[_errStr]);
 }
 
-class WeChatAutoDeductResponse extends BaseWeChatResponse {
+class WeChatOpenBusinessWebviewResponse extends BaseWeChatResponse {
   final int type;
   final int errCode;
   final int businessType;
   final String resultInfo;
 
-  WeChatAutoDeductResponse.fromMap(Map map)
+  WeChatOpenBusinessWebviewResponse.fromMap(Map map)
       : type = map["type"],
         errCode = map[_errCode],
         businessType = map["businessType"],
@@ -171,6 +173,15 @@ class WeChatAuthGotQRCodeResponse extends BaseWeChatResponse {
 class WeChatQRCodeScannedResponse extends BaseWeChatResponse {
   WeChatQRCodeScannedResponse.fromMap(Map map)
       : super._(map[_errCode], map[_errStr]);
+}
+
+// 获取微信打开App时携带的参数
+class WeChatShowMessageFromWXRequest extends BaseWeChatResponse {
+  final String extMsg;
+
+  WeChatShowMessageFromWXRequest.fromMap(Map map)
+      : extMsg = map["extMsg"],
+        super._(0, '');
 }
 
 ///WechatAuth_Err_OK(0),

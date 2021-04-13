@@ -5,11 +5,11 @@ Actually, almost every result from functions like `shareToWeChat` or `payWithWeC
 So if you want get the real result you shall do like this:
 
 ```dart
-  weChatResponseEventHandler.listen((res) {
-      if (res is WeChatPaymentResponse) {
-          // do something here
-      }
-    });
+  fluwx.weChatResponseEventHandler.listen((res) {
+    if (res is fluwx.WeChatPaymentResponse) {
+      // do something here
+    }
+  });
 ```
 Take a look at subclasses of `BaseWeChatResponse` for help.
 
@@ -26,7 +26,7 @@ The are four built-in types  of  `WeChatImage` in `fluwx`:
   WeChatImage.binary(Uint8List source, {String suffix = ".jpeg"});
 ```
 
-The suffix shall begins with `.`. The priority of `suffix` is highest, `fluwx` will try to read suffix from paths if `suffix` is blank.
+The priority of `suffix` is highest, `fluwx` will try to read suffix from paths if `suffix` is blank.
 
 The max size of image youcan share to WeChat is `10M`.`Fluwx` wil compress `WeChatImage` itself if it's  used as `thumbnail` or `hdImagePath`,  
 otherwise, it doesn't. However, you'd better compress thumbnail yourself as the result of compression is unpredictable.

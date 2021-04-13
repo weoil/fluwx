@@ -4,7 +4,7 @@
 
 #import <Flutter/Flutter.h>
 #import "FluwxStringUtil.h"
-#import "WXApiObject.h"
+#import <WechatOpenSDK/WXApiObject.h>
 #import "FluwxResponseHandler.h"
 
 @implementation FluwxResponseHandler
@@ -103,15 +103,24 @@ FlutterMethodChannel *fluwxMethodChannel = nil;
         }
 
         WXSubscribeMsgResp *subscribeMsgResp = (WXSubscribeMsgResp *) resp;
-        NSDictionary *subMsgResult = @{
-                @"openid": subscribeMsgResp.openId,
-                @"templateId": subscribeMsgResp.templateId,
-                @"action": subscribeMsgResp.action,
-                @"reserved": subscribeMsgResp.reserved,
-                @"scene": @(subscribeMsgResp.scene),
-        };
-
-        [fluwxMethodChannel invokeMethod:@"onSubscribeMsgResp" arguments:subMsgResult];
+        NSMutableDictionary *result = [NSMutableDictionary dictionary];
+        if(subscribeMsgResp.openId != nil){
+           result[@"openid"] = subscribeMsgResp.openId;
+        }
+        if(subscribeMsgResp.openId != nil){
+           result[@"templateId"] = subscribeMsgResp.templateId;
+        }
+        if(subscribeMsgResp.openId != nil){
+            result[@"action"] = subscribeMsgResp.action;
+        }
+        if(subscribeMsgResp.openId != nil){
+          result[@"reserved"] = subscribeMsgResp.reserved;
+        }
+        if(subscribeMsgResp.openId != nil){
+          result[@"scene"] = @(subscribeMsgResp.scene);
+        }
+   
+        [fluwxMethodChannel invokeMethod:@"onSubscribeMsgResp" arguments:result];
     } else if ([resp isKindOfClass:[WXLaunchMiniProgramResp class]]) {
         if ([_delegate respondsToSelector:@selector(managerDidRecvLaunchMiniProgram:)]) {
             [_delegate managerDidRecvLaunchMiniProgram:(WXLaunchMiniProgramResp *) resp];
@@ -179,7 +188,7 @@ FlutterMethodChannel *fluwxMethodChannel = nil;
                 @"businessType": @(businessResp.businessType),
         };
 
-        [fluwxMethodChannel invokeMethod:@"onAutoDeductResponse" arguments:result];
+        [fluwxMethodChannel invokeMethod:@"onWXOpenBusinessWebviewResponse" arguments:result];
     }
 }
 
@@ -203,5 +212,10 @@ FlutterMethodChannel *fluwxMethodChannel = nil;
             [_delegate managerDidRecvLaunchFromWXReq:launchReq];
         }
     }
+    LaunchFromWXReq *launchFromWXReq = (LaunchFromWXReq *) req;
+    NSDictionary *result = @{
+            @"extMsg": launchFromWXReq.message.messageExt
+    };
+    [fluwxMethodChannel invokeMethod:@"onWXShowMessageFromWX" arguments:result];
 }
 @end
