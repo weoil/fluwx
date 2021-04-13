@@ -3,7 +3,7 @@
 [![Build status](https://img.shields.io/cirrus/github/OpenFlutter/fluwx/master)](https://cirrus-ci.com/github/OpenFlutter/fluwx)
 ======
 
-![logo](https://github.com/JarvanMo/ImagesStore/blob/master/fluwx/fluwx_logo.png)
+![logo](https://gitee.com/OpenFlutter/resoures-repository/blob/master/fluwx/fluwx_logo.png)
 
 [中文请移步此处](./README_CN.md)
 
@@ -21,6 +21,7 @@
 - Launch mini program in WeChat.
 - Subscribe Message.
 - Just open WeChat app.
+- Launch app From wechat link.
 
 ## Preparation
 
@@ -72,20 +73,21 @@ And you have to understand the difference between debug signature and release si
 - [Share](./doc/SHARE.md)
 - [Payment](./doc/PAYMENT.md)
 - [Auth](./doc/AUTH.md)
+- [Launch app from h5](./doc/LAUNCH_APP_FROM_H5.md)
 
 For more capabilities, you can read the public functions of `fluwx`.
 
 ## QA
 
-[These questions maybe help](./doc/QA.md)
+[These questions maybe help](./doc/QA_CN.md)
 
 ## Donate
 Buy the writer a cup of coffee。
 
-<img src="https://github.com/JarvanMo/ImagesStore/blob/master/common/wx.jpeg" height="300">  <img src="https://github.com/JarvanMo/ImagesStore/blob/master/common/ali.jpeg" height="300">
+<img src="https://gitee.com/OpenFlutter/resoures-repository/blob/master/common/wx.jpeg" height="300">  <img src="https://gitee.com/OpenFlutter/resoures-repository/blob/master/common/ali.jpeg" height="300">
 
 ## Subscribe Us On WeChat
-![subscribe](https://github.com/JarvanMo/ImagesStore/blob/master/fluwx/wx_subscription.png)
+![subscribe](https://gitee.com/OpenFlutter/resoures-repository/blob/master/fluwx/wx_subscription.png)
 
 ## LICENSE
 

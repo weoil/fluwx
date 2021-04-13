@@ -3,7 +3,7 @@
 [![Build status](https://img.shields.io/cirrus/github/OpenFlutter/fluwx/master)](https://cirrus-ci.com/github/OpenFlutter/fluwx)
 ======
 
-![logo](https://github.com/JarvanMo/ImagesStore/blob/master/fluwx/fluwx_logo.png)
+![logo](https://gitee.com/OpenFlutter/resoures-repository/blob/master/fluwx/fluwx_logo.png)
 
 ## 什么是Fluwx
 `Fluwx` 是一个[微信SDK](https://developers.weixin.qq.com/doc/oplatform/Mobile_App/Resource_Center_Homepage.html)插件，它允许开发者调用
@@ -19,6 +19,7 @@
 - 拉起小程序.
 - 订阅消息.
 - 打开微信.
+- 从微信标签打开应用
 
 ## 准备
 
@@ -70,7 +71,7 @@ registerWxApi(appId: "wxd930ea5d5a228f5f",universalLink: "https://your.univerall
 - [分享](./doc/SHARE_CN.md)
 - [支付](./doc/PAYMENT_CN.md)
 - [登录](./doc/AUTH_CN.md)
-
+- [从微信标签打开应用](./doc/LAUNCH_APP_FROM_H5_CN.md)
 对于更多功能，可以查看源码。
 
 ## QA
@@ -80,10 +81,10 @@ registerWxApi(appId: "wxd930ea5d5a228f5f",universalLink: "https://your.univerall
 ## 捐助
 开源不易，请作者喝杯咖啡。
 
-<img src="https://github.com/JarvanMo/ImagesStore/blob/master/common/wx.jpeg" height="300">  <img src="https://github.com/JarvanMo/ImagesStore/blob/master/common/ali.jpeg" height="300">
+<img src="https://gitee.com/OpenFlutter/resoures-repository/blob/master/common/wx.jpeg" height="300">  <img src="https://gitee.com/OpenFlutter/resoures-repository/blob/master/common/ali.jpeg" height="300">
 
 ## 关注公众号
-![subscribe](https://github.com/JarvanMo/ImagesStore/blob/master/fluwx/wx_subscription.png)
+![subscribe](https://gitee.com/OpenFlutter/resoures-repository/blob/master/fluwx/wx_subscription.png)
 
 ## LICENSE
 

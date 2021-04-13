@@ -17,12 +17,15 @@ package com.jarvan.fluwx.wxapi
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import com.jarvan.fluwx.handlers.FluwxResponseHandler
+import com.jarvan.fluwx.handlers.FluwxRequestHandler
 import com.jarvan.fluwx.handlers.WXAPiHandler
 import com.tencent.mm.opensdk.modelbase.BaseReq
 import com.tencent.mm.opensdk.modelbase.BaseResp
 import com.tencent.mm.opensdk.openapi.IWXAPIEventHandler
+import io.flutter.Log
 
 
 open class FluwxWXEntryActivity : Activity(), IWXAPIEventHandler {
@@ -33,10 +36,21 @@ open class FluwxWXEntryActivity : Activity(), IWXAPIEventHandler {
         super.onCreate(savedInstanceState)
 
         try {
+            if (!WXAPiHandler.wxApiRegistered) {
+                var appInfo = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
+                val wechatAppId = appInfo.metaData.getString("weChatAppId")
+                if (wechatAppId != null ){
+                    WXAPiHandler.setupWxApi(wechatAppId,this)
+                    WXAPiHandler.setCoolBool(true)
+                    Log.d("fluwx","weChatAppId:" + wechatAppId)
+                }else {
+                    Log.e("fluwx","can't load meta-data weChatAppId")
+                }
+            }
             WXAPiHandler.wxApi?.handleIntent(intent, this)
         } catch (e: Exception) {
             e.printStackTrace()
-            startSpecifiedActivity()
+            startSpecifiedActivity(defaultFlutterActivityAction())
             finish()
         }
     }
@@ -50,7 +64,7 @@ open class FluwxWXEntryActivity : Activity(), IWXAPIEventHandler {
             WXAPiHandler.wxApi?.handleIntent(intent, this)
         } catch (e: Exception) {
             e.printStackTrace()
-            startSpecifiedActivity()
+            startSpecifiedActivity(defaultFlutterActivityAction())
             finish()
         }
     }
@@ -59,10 +73,7 @@ open class FluwxWXEntryActivity : Activity(), IWXAPIEventHandler {
     override fun onReq(baseReq: BaseReq) {
         // FIXME: 可能是官方的Bug，从微信拉起APP的Intent类型不对，无法跳转回Flutter Activity
         // 稳定复现场景：微信版本为7.0.5，小程序SDK为2.7.7
-        if (baseReq.type == 4) {
-            // com.tencent.mm.opensdk.constants.ConstantsAPI.COMMAND_SHOWMESSAGE_FROM_WX = 4
-            startSpecifiedActivity()
-        }
+       FluwxRequestHandler.onReq(baseReq,this)
     }
 
     // 第三方应用发送到微信的请求处理后的响应结果，会回调到该方法
@@ -71,11 +82,20 @@ open class FluwxWXEntryActivity : Activity(), IWXAPIEventHandler {
         finish()
     }
 
-    private fun startSpecifiedActivity() {
-        Intent("$packageName.FlutterActivity").run {
+    private fun startSpecifiedActivity(action: String, bundle: Bundle? = null, bundleKey: String? = null) {
+        Intent(action).run {
+            bundleKey?.let {
+                putExtra(bundleKey, bundle)
+            }
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            startActivity(this)
+            packageManager?.let {
+                resolveActivity(packageManager)?.also {
+                    startActivity(this)
+                    finish()
+                }
+            }
         }
-        finish()
     }
+
+    private fun defaultFlutterActivityAction(): String = "$packageName.FlutterActivity"
 }

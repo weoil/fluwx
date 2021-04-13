@@ -1,3 +1,42 @@
+## 3.4.1
+* 修复热启动传值问题
+
+## 3.4.0
+* 修复从外部拉起App白屏问题
+* 修复从外部拉起App无法传值问题
+
+## 3.3.2
+* Fix #357
+
+## 3.3.1
+* Fix #354
+
+## 3.3.0
+* Null-safety support
+* Fix #350
+
+## 2.6.2
+* Fix #338 on Android
+
+## 2.6.1
+* Fix #338
+
+## 2.6.0+2
+* Remove trailing
+
+## 2.6.0+1
+* Nothing
+
+## 2.6.0
+* Android支持通过H5冷启动app传递<wx-open-launch-app>中的extinfo数据
+* Android新加<meta-data>handleWeChatRequestByFluwx</meta-data>。
+
+## 2.5.0+1
+* Fix trailing , issue.
+
+## 2.5.0
+* App获取开放标签<wx-open-launch-app>中的extinfo数据
+
 ## 2.4.2
 * Fix #317
 

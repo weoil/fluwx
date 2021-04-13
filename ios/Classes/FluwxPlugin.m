@@ -4,20 +4,34 @@
 #import "FluwxAuthHandler.h"
 #import "FluwxShareHandler.h"
 
+@interface FluwxPlugin()<WXApiManagerDelegate>
+@property (strong,nonatomic)NSString *extMsg;
+@end
+
 @implementation FluwxPlugin
 FluwxAuthHandler *_fluwxAuthHandler;
 FluwxShareHandler *_fluwxShareHandler;
 
 BOOL handleOpenURLByFluwx = YES;
 
+FlutterMethodChannel *channel = nil;
+
 + (void)registerWithRegistrar:(NSObject <FlutterPluginRegistrar> *)registrar {
-    FlutterMethodChannel *channel = [FlutterMethodChannel
-            methodChannelWithName:@"com.jarvanmo/fluwx"
-                  binaryMessenger:[registrar messenger]];
-    FluwxPlugin *instance = [[FluwxPlugin alloc] initWithRegistrar:registrar methodChannel:channel];
-    [registrar addMethodCallDelegate:instance channel:channel];
-    [[FluwxResponseHandler defaultManager] setMethodChannel:channel];
-    [registrar addApplicationDelegate:instance];
+    
+#if TARGET_OS_IPHONE
+        if (channel == nil) {
+#endif
+        channel = [FlutterMethodChannel
+                methodChannelWithName:@"com.jarvanmo/fluwx"
+                      binaryMessenger:[registrar messenger]];
+        FluwxPlugin *instance = [[FluwxPlugin alloc] initWithRegistrar:registrar methodChannel:channel];
+        [registrar addMethodCallDelegate:instance channel:channel];
+        [[FluwxResponseHandler defaultManager] setMethodChannel:channel];
+        
+        [registrar addApplicationDelegate:instance];
+#if TARGET_OS_IPHONE
+        }
+#endif
 
 }
 
@@ -26,8 +40,8 @@ BOOL handleOpenURLByFluwx = YES;
     if (self) {
         _fluwxAuthHandler = [[FluwxAuthHandler alloc] initWithRegistrar:registrar methodChannel:flutterMethodChannel];
         _fluwxShareHandler = [[FluwxShareHandler alloc] initWithRegistrar:registrar];
+        [FluwxResponseHandler defaultManager].delegate = self;
     }
-
     return self;
 }
 
@@ -56,6 +70,8 @@ BOOL handleOpenURLByFluwx = YES;
         [self handleAutoDeductWithCall:call result:result];
     }else if([@"authByPhoneLogin" isEqualToString:call.method]){
         [_fluwxAuthHandler handleAuthByPhoneLogin:call result:result];
+    }else if([@"getExtMsg" isEqualToString:call.method]){
+        [self handelGetExtMsgWithCall:call result:result];
     } else if ([call.method hasPrefix:@"share"]) {
         [_fluwxShareHandler handleShare:call result:result];
     } else {
@@ -180,6 +196,10 @@ BOOL handleOpenURLByFluwx = YES;
     }];
 }
 
+- (void)handelGetExtMsgWithCall:(FlutterMethodCall *)call result:(FlutterResult)result {
+    result(self.extMsg);
+}
+
 
 - (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
     return [WXApi handleOpenURL:url delegate:[FluwxResponseHandler defaultManager]];
@@ -205,6 +225,10 @@ BOOL handleOpenURLByFluwx = YES;
     } else {
         return NO;
     }
+}
+
+- (void)managerDidRecvLaunchFromWXReq:(LaunchFromWXReq *)request {
+    self.extMsg = request.message.messageExt;
 }
 
 @end
